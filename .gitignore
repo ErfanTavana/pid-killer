@@ -1,0 +1,52 @@
+# ------------------------
+# Python cache / bytecode
+# ------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ------------------------
+# Virtual environments
+# ------------------------
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# ------------------------
+# PyInstaller build output
+# ------------------------
+build/
+dist/
+*.spec
+
+# ------------------------
+# Logs
+# ------------------------
+*.log
+
+# ------------------------
+# OS-specific files
+# ------------------------
+# Windows
+Thumbs.db
+Desktop.ini
+
+# macOS (in case you ever touch it there)
+.DS_Store
+
+# ------------------------
+# IDE / Editor configs
+# ------------------------
+.vscode/
+.idea/
+*.iml
+
+# ------------------------
+# Misc
+# ------------------------
+# Local settings, temp, etc (if you create any later)

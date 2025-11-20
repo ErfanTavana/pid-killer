@@ -13,6 +13,8 @@ permissions:
 jobs:
   build-and-release:
     runs-on: windows-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -93,6 +95,7 @@ jobs:
           Write-Notes @("## Release $tag", "", "Recent changes:", "", $fallbackLog)
 
       - name: Publish GitHub Release
+        if: github.event.repository.fork == false
         uses: softprops/action-gh-release@v2
         with:
           name: Kill PID ${{ github.ref_name }}

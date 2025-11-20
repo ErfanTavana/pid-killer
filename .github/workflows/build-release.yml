@@ -38,9 +38,18 @@ jobs:
         run: |
           $notesPath = "release_notes.md"
           $tag = "${{ github.ref_name }}"
+          $templatePath = ".github/release_template.md"
 
           function Write-Notes($lines) {
             $lines | Set-Content -Path $notesPath -Encoding UTF8
+          }
+
+          function Use-Template { param([string]$tag)
+            if (-not (Test-Path $templatePath)) {
+              return $null
+            }
+            $content = Get-Content $templatePath
+            return $content | ForEach-Object { $_ -replace '{{TAG}}', $tag }
           }
 
           if (Test-Path "CHANGELOG.md") {
@@ -59,15 +68,6 @@ jobs:
               Write-Notes $changelog[$startIndex..$endIndex]
               exit 0
             }
-
-            Write-Notes @(
-              "## Release $tag",
-              "",
-              "No matching section found in CHANGELOG.md. Full changelog:",
-              "",
-              $changelog
-            )
-            exit 0
           }
 
           $previousTag = git describe --tags --abbrev=0 "$tag^" 2>$null
@@ -77,6 +77,12 @@ jobs:
               Write-Notes @("## Changes since $previousTag", "", $log)
               exit 0
             }
+          }
+
+          $templateContent = Use-Template -tag $tag
+          if ($templateContent) {
+            Write-Notes $templateContent
+            exit 0
           }
 
           $fallbackLog = git log -5 --pretty=format:"* %s"

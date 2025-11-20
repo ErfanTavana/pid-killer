@@ -6,6 +6,10 @@ on:
       - "v*"       # هر tag که با v شروع شود، مثلا v1.0.0
   workflow_dispatch:  # اجرا به صورت دستی از تب Actions هم ممکن است
 
+# این مجوز برای ایجاد Release لازم است وگرنه softprops/action-gh-release با خطای 403 مواجه می‌شود
+permissions:
+  contents: write
+
 jobs:
   build-and-release:
     runs-on: windows-latest

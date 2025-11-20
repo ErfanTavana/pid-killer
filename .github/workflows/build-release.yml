@@ -33,23 +33,61 @@ jobs:
           mkdir output
           copy dist\kill_pid_admin.exe output\kill_pid_admin-${{ github.ref_name }}.exe
 
-      - name: Create GitHub Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Kill PID ${{ github.ref_name }}
-          draft: false
-          prerelease: false
+      - name: Generate release notes
+        shell: pwsh
+        run: |
+          $notesPath = "release_notes.md"
+          $tag = "${{ github.ref_name }}"
 
-      - name: Upload EXE to Release
-        uses: actions/upload-release-asset@v1
+          function Write-Notes($lines) {
+            $lines | Set-Content -Path $notesPath -Encoding UTF8
+          }
+
+          if (Test-Path "CHANGELOG.md") {
+            $changelog = Get-Content "CHANGELOG.md"
+            $pattern = "^##\s+.*$tag"
+            $matches = $changelog | Select-String -Pattern $pattern
+
+            if ($matches) {
+              $startIndex = $matches[0].LineNumber - 1
+              $nextHeading = ($changelog | Select-String -Pattern '^##\s+' -Context 0,0 | Where-Object { $_.LineNumber -gt $startIndex } | Select-Object -First 1)
+              if ($nextHeading) {
+                $endIndex = $nextHeading.LineNumber - 2
+              } else {
+                $endIndex = $changelog.Length - 1
+              }
+              Write-Notes $changelog[$startIndex..$endIndex]
+              exit 0
+            }
+
+            Write-Notes @(
+              "## Release $tag",
+              "",
+              "No matching section found in CHANGELOG.md. Full changelog:",
+              "",
+              $changelog
+            )
+            exit 0
+          }
+
+          $previousTag = git describe --tags --abbrev=0 "$tag^" 2>$null
+          if ($LASTEXITCODE -eq 0 -and $previousTag) {
+            $log = git log "$previousTag..$tag" --pretty=format:"* %s"
+            if ($log) {
+              Write-Notes @("## Changes since $previousTag", "", $log)
+              exit 0
+            }
+          }
+
+          $fallbackLog = git log -5 --pretty=format:"* %s"
+          Write-Notes @("## Release $tag", "", "Recent changes:", "", $fallbackLog)
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Kill PID ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          body_path: release_notes.md
+          files: output/kill_pid_admin-${{ github.ref_name }}.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: output/kill_pid_admin-${{ github.ref_name }}.exe
-          asset_name: kill_pid_admin-${{ github.ref_name }}.exe
-          asset_content_type: application/octet-stream

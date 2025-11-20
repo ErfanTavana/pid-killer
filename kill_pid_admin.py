@@ -4,6 +4,7 @@ import ctypes
 import subprocess
 
 from colorama import init, Fore, Style
+import psutil
 
 
 # Initialize colorama (for Windows CMD)
@@ -39,6 +40,43 @@ def relaunch_as_admin():
     except Exception as e:
         print(Fore.RED + f"[ERROR] Failed to relaunch as Administrator: {e}")
     sys.exit(0)
+
+
+def get_process_info(pid: int):
+    """
+    Retrieve process info (name, user, memory, path) using psutil.
+    Returns a dict or None if process does not exist.
+    """
+    try:
+        p = psutil.Process(pid)
+        name = p.name()
+        try:
+            user = p.username()
+        except Exception:
+            user = "N/A"
+
+        try:
+            mem_bytes = p.memory_info().rss
+            mem_mb = mem_bytes / (1024 * 1024)
+        except Exception:
+            mem_mb = 0.0
+
+        try:
+            path = p.exe()
+        except Exception:
+            path = "N/A"
+
+        return {
+            "name": name,
+            "user": user,
+            "mem_mb": mem_mb,
+            "path": path,
+        }
+    except psutil.NoSuchProcess:
+        return None
+    except Exception as e:
+        print(Fore.RED + f"[WARN] Failed to read process info for PID {pid}: {e}")
+        return None
 
 
 def kill_pid(pid: int) -> None:
@@ -112,6 +150,28 @@ def main():
             print(Fore.RED + "[ERROR] PID must be a positive number.\n")
             continue
 
+        # --- New: show process info BEFORE killing ---
+        info = get_process_info(pid)
+        if info is None:
+            print(Fore.RED + f"[ERROR] No process found with PID {pid}.\n")
+            continue
+
+        print(Fore.YELLOW + "[TARGET] Process information:")
+        print(Fore.YELLOW + f"  Name   : {info['name']}")
+        print(Fore.YELLOW + f"  PID    : {pid}")
+        print(Fore.YELLOW + f"  User   : {info['user']}")
+        print(Fore.yellow + f"  Memory : {info['mem_mb']:.1f} MB")
+        print(Fore.YELLOW + f"  Path   : {info['path']}\n")
+
+        confirm = input(
+            Fore.MAGENTA + "[CONFIRM] Kill this process? (y/N): " + Style.RESET_ALL
+        ).strip().lower()
+
+        if confirm not in {"y", "yes"}:
+            print(Fore.CYAN + "[*] Kill operation cancelled.\n")
+            continue
+
+        # If confirmed → kill
         kill_pid(pid)
         print(Fore.GREEN + "-" * 60 + "\n")
 

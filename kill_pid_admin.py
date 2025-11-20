@@ -160,7 +160,7 @@ def main():
         print(Fore.YELLOW + f"  Name   : {info['name']}")
         print(Fore.YELLOW + f"  PID    : {pid}")
         print(Fore.YELLOW + f"  User   : {info['user']}")
-        print(Fore.yellow + f"  Memory : {info['mem_mb']:.1f} MB")
+        print(Fore.YELLOW + f"  Memory : {info['mem_mb']:.1f} MB")
         print(Fore.YELLOW + f"  Path   : {info['path']}\n")
 
         confirm = input(

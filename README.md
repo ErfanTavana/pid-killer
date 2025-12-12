@@ -1,91 +1,66 @@
-# Kill PID (Windows Admin Tool)
+# Kill PID (Windows Administrator CLI)
 
-<p align="center">
-  <img src="logo.ico" alt="Kill PID logo" width="120" />
-</p>
+## Project Overview
+Kill PID is a Windows-only command-line utility that elevates itself to Administrator privileges and terminates a user-specified process ID (PID). The tool inspects the target process before termination, displaying metadata such as name, owner, memory usage, and executable path.
 
-A lightweight Windows command-line helper to force-kill processes by PID with automatic Administrator elevation and a hacker-style console UI.
+## Key Features
+- Administrator self-elevation via `ShellExecuteW` when not already elevated.
+- Windows platform guard that exits on non-Windows hosts.
+- Process inspection before termination using `psutil` (name, user, memory, executable path).
+- Confirmation prompt prior to issuing a forced termination.
+- Process killing executed through `taskkill /PID <pid> /F /T` with success and error reporting.
+- Colored console output and ASCII banner using `colorama`.
 
-> Binary screenshots are not stored in the repo. Capture your own `docs/cli-screenshot.png` locally (see instructions below).
+## Architecture / Structure
+- `kill_pid_admin.py`: Entry point. Handles platform and elevation checks, input loop, process inspection, confirmation, and termination.
+- `requirements.txt`: Runtime dependencies (`colorama`, `psutil`) and optional bundling tool (`pyinstaller`).
+- `version_info.txt`: Version metadata consumed by PyInstaller when building a Windows executable.
+- `logo.ico`: Icon file referenced during executable packaging.
 
-## Features
+## How It Works
+1. The program starts in `main()` and exits immediately if the host OS is not Windows (`os.name != "nt"`).
+2. If not running as Administrator, it relaunches itself with the `runas` verb to obtain elevated privileges, then terminates the original process.
+3. After elevation, it clears the console and prints an ASCII banner.
+4. A loop prompts for a PID. Inputs of `q`, `quit`, or `exit` end the program; non-numeric or non-positive values are rejected.
+5. For a valid PID, `psutil` is queried to gather name, username (best effort), RSS memory usage, and executable path. Missing data is reported as `N/A`.
+6. The collected details are shown to the user, who must confirm termination. Only `y` or `yes` proceed.
+7. Confirmed requests call `taskkill` with `/F /T` to forcibly terminate the process and any child processes. The tool reports success or displays `taskkill` error output.
 
-- 🔐 **Auto Admin Elevation** – relaunches itself with Administrator privileges using `ShellExecuteW`.
-- 🎯 **PID-based termination** – quickly terminate any process by PID using `taskkill /F /T`.
-- 🧠 **Pre-kill process inspection** – shows process name, user, memory usage, and executable path before killing (via `psutil`).
-- 💻 **Hacker-style colored CLI** – powered by `colorama` with a custom ASCII banner.
-- 🪟 **Windows-only** – designed and tested for Windows 10 / 11.
+## Requirements & Dependencies
+- Windows operating system.
+- Python 3.x.
+- Packages: `colorama`, `psutil`.
+- Optional for packaging: `pyinstaller` (uses `logo.ico` and `version_info.txt`).
 
-## Requirements
-
-- Windows 10 or 11
-- Python 3.10+ (tested on Python 3.12)
-- Packages: `colorama`, `psutil`
-- Optional: `pyinstaller` for building a standalone `.exe`
-
-Install dependencies:
+Install Python dependencies:
 
 ```bash
-pip install colorama psutil pyinstaller
+pip install -r requirements.txt
 ```
 
-## Usage (Python)
-
-Run directly with Python:
+## How to Run / Use
+Run the script directly:
 
 ```bash
 python kill_pid_admin.py
 ```
 
-The tool will:
+Interaction flow:
+- The script elevates to Administrator if needed and restarts itself.
+- Enter a PID when prompted. Invalid input is rejected with an error message.
+- Review the displayed process information and confirm with `y` or `yes` to terminate.
+- Type `q`, `quit`, or `exit` to stop the loop.
 
-1. Check that it is running on Windows.
-2. Elevate to Administrator if needed.
-3. Show the hacker-style banner.
-4. Prompt for a PID in a loop.
-5. Display process information (name, user, RAM, path).
-6. Ask for confirmation before killing the process.
-
-## Build an EXE with PyInstaller
-
-From the project root:
+## Packaging with PyInstaller (Windows)
+To build a standalone executable (requires PyInstaller installed):
 
 ```bash
 pyinstaller --onefile --uac-admin --icon=logo.ico --version-file=version_info.txt kill_pid_admin.py
 ```
 
-The output executable will be located in the `dist/` folder. You can upload the built EXE as a GitHub Release asset.
+The resulting binary is created under `dist/` and inherits metadata from `version_info.txt` and the icon from `logo.ico`.
 
-## Screenshot
-
-Example hacker-style CLI interface (text preview):
-
-```
- _  __ _ _ _     ___ ___ ___     _ _
-| |/ _(_) | |   |_ _| _ \ _ \___| | |_
-| |  _| | | |    | ||   /   / -_) |  _|
-|_|_| |_|_|_|   |___|_|_\_|_\___|_|\__|
-
-Process info:
-PID 4242 | python.exe | user: AdminUser | RAM: 42 MB | path: C:\\Tools\\python.exe
-
-Kill this process? [y/N]:
-```
-
-> To include a real screenshot, generate `docs/cli-screenshot.png` locally (e.g., with Snipping Tool) and add it to your fork.
-
-## Security / Disclaimer
-
-⚠ Use at your own risk. Killing critical system processes can cause Windows to become unstable or crash. This tool is intended for advanced users, developers, and system administrators. Do not use this tool on systems you do not own or do not have explicit permission to manage. The author is not responsible for any damage, data loss, or instability caused by misuse.
-
-## Roadmap / Ideas
-
-- Kill by process name (not just PID).
-- SAFE / AGGRESSIVE modes (taskkill without `/F /T` vs with).
-- Config file (`config.json`) for protected processes and defaults.
-- Process history and logging to file.
-- Optional simple GUI on top of this CLI core.
-
-## License
-
-This project is licensed under the MIT License – see the [LICENSE](LICENSE) file for details.
+## Notes & Limitations
+- The utility relies on Windows-specific APIs (`ShellExecuteW`) and the `taskkill` command; it will exit on non-Windows systems.
+- Process information retrieval depends on `psutil`; missing permissions or terminated processes may result in `N/A` values.
+- Termination is forceful (`/F /T`), so use caution to avoid killing critical system processes.
